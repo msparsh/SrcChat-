@@ -1,0 +1,9 @@
+backend/app/__pycache__
+frontend/node_modules/
+backend/app/schemas/__pycache__/
+backend/tests/__pycache__/
+backend/app/llm/__pycache__/
+backend/app/models/__pycache__/
+backend/app/ingest/__pycache__/
+backend/app/core/__pycache__/
+backend/app/agent/__pycache__/
