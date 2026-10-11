@@ -7,7 +7,12 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship
 from app.core.config import settings
 
-_dev_sqlite = os.environ.get("SRCCHAT_DEV_SQLITE", "").lower() in ("1", "true", "yes")
+_dev_sqlite = (
+    os.environ.get("SRCCHAT_DEV_SQLITE", "").lower() in ("1", "true", "yes")
+    or "sqlite" in settings.DATABASE_URL
+    or os.path.exists("srcchat_dev.db")
+    or os.path.exists("backend/srcchat_dev.db")
+)
 
 if _dev_sqlite:
     # SQLite-compatible types

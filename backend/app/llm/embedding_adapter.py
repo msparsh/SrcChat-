@@ -15,6 +15,7 @@ class EmbeddingAdapter(ABC):
 
 class DummyEmbeddingAdapter(EmbeddingAdapter):
     """Deterministic pseudo-embeddings for testing, CI, and local dev without API keys."""
+
     def __init__(self, dimensions: int = 1536):
         self.dimensions = dimensions
 
@@ -70,7 +71,55 @@ class OpenAIEmbeddingAdapter(EmbeddingAdapter):
         return [item["embedding"] for item in data]
 
 
+class GeminiEmbeddingAdapter(EmbeddingAdapter):
+    def __init__(self, api_key: str, model: str, dimensions: int, base_url: str = None):
+        self.api_key = api_key
+        self.model = model
+        self.dimensions = dimensions
+        self.base_url = (
+            base_url or "https://generativelanguage.googleapis.com/v1beta").rstrip("/")
+
+    async def embed_texts(self, texts: List[str]) -> List[List[float]]:
+        if not texts:
+            return []
+
+        payload = {
+            "requests": [
+                {
+                    "model": f"models/{self.model}",
+                    "content": {"parts": [{"text": item}]},
+                    "outputDimensionality": self.dimensions,
+                }
+                for item in texts
+            ]
+        }
+
+        async def _call():
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                res = await client.post(
+                    f"{self.base_url}/models/{self.model}:batchEmbedContents",
+                    headers={"x-goog-api-key": self.api_key,
+                             "Content-Type": "application/json"},
+                    json=payload,
+                )
+                res.raise_for_status()
+                return res.json()
+
+        tracked = await tracker.track_async(_call, call_type="embedding", model=self.model)
+        return [item["values"] for item in tracked.response.get("embeddings", [])]
+
+
 def get_embedding_adapter() -> EmbeddingAdapter:
     if settings.EMBEDDING_PROVIDER == "openai" and settings.EMBEDDING_API_KEY:
         return OpenAIEmbeddingAdapter(api_key=settings.EMBEDDING_API_KEY, model=settings.EMBEDDING_MODEL)
+    if settings.EMBEDDING_PROVIDER == "gemini" and settings.EMBEDDING_API_KEY:
+        model = settings.EMBEDDING_MODEL
+        if model == "text-embedding-3-small":
+            model = "gemini-embedding-001"
+        return GeminiEmbeddingAdapter(
+            api_key=settings.EMBEDDING_API_KEY,
+            model=model,
+            dimensions=settings.EMBEDDING_DIMENSIONS,
+            base_url=settings.EMBEDDING_BASE_URL or None,
+        )
     return DummyEmbeddingAdapter(dimensions=settings.EMBEDDING_DIMENSIONS)

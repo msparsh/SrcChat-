@@ -23,6 +23,8 @@ class AgentToolRegistry:
     ) -> List[Dict[str, Any]]:
         """Searches indexed code vectors and keyword index using hybrid search."""
         repo_ids = await self._resolve_repo_ids(repos)
+        if repos and not repo_ids:
+            return []
         results = await self.retriever.search(
             query=query,
             repo_ids=repo_ids,
@@ -44,8 +46,11 @@ class AgentToolRegistry:
     async def keyword_search(self, pattern: str, repos: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """Performs exact/trigram substring search across indexed chunks."""
         repo_ids = await self._resolve_repo_ids(repos)
+        if repos and not repo_ids:
+            return []
         stmt = (
-            select(Repo.name, File.path, Chunk.start_line, Chunk.end_line, Chunk.text)
+            select(Repo.name, File.path, Chunk.start_line,
+                   Chunk.end_line, Chunk.text)
             .join(File, Chunk.file_id == File.id)
             .join(Repo, Chunk.repo_id == Repo.id)
             .where(Chunk.text.ilike(f"%{pattern}%"))
@@ -103,12 +108,13 @@ class AgentToolRegistry:
             "repo": repo_name,
             "path": file_obj.path,
             "total_lines": len(lines),
-            "content": raw[:20000] # Safe cap
+            "content": raw[:20000]  # Safe cap
         }
 
     async def list_tree(self, repo: str, path_prefix: Optional[str] = None) -> List[str]:
         """Lists directory tree from indexed file paths."""
-        stmt = select(File.path).join(Repo, File.repo_id == Repo.id).where(Repo.name.ilike(repo))
+        stmt = select(File.path).join(Repo, File.repo_id ==
+                                      Repo.id).where(Repo.name.ilike(repo))
         if path_prefix:
             stmt = stmt.where(File.path.startswith(path_prefix.lstrip("/")))
         stmt = stmt.order_by(File.path).limit(100)
@@ -118,8 +124,11 @@ class AgentToolRegistry:
     async def find_symbol(self, name: str, repos: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """Finds symbol declarations across indexed repos."""
         repo_ids = await self._resolve_repo_ids(repos)
+        if repos and not repo_ids:
+            return []
         stmt = (
-            select(Repo.name, File.path, Symbol.name, Symbol.kind, Symbol.start_line, Symbol.end_line)
+            select(Repo.name, File.path, Symbol.name, Symbol.kind,
+                   Symbol.start_line, Symbol.end_line)
             .join(File, Symbol.file_id == File.id)
             .join(Repo, Symbol.repo_id == Repo.id)
             .where(Symbol.name.ilike(name))
@@ -143,8 +152,11 @@ class AgentToolRegistry:
     async def find_references(self, symbol: str, repos: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """Finds incoming call and import edges to the given symbol."""
         repo_ids = await self._resolve_repo_ids(repos)
+        if repos and not repo_ids:
+            return []
         stmt = (
-            select(Repo.name, Edge.file_path, Edge.from_symbol, Edge.to_symbol, Edge.kind, Edge.line_number)
+            select(Repo.name, Edge.file_path, Edge.from_symbol,
+                   Edge.to_symbol, Edge.kind, Edge.line_number)
             .join(Repo, Edge.repo_id == Repo.id)
             .where(Edge.to_symbol.ilike(f"%{symbol}%"))
         )
@@ -186,6 +198,7 @@ class AgentToolRegistry:
     async def _resolve_repo_ids(self, repo_names: Optional[List[str]]) -> Optional[List[uuid.UUID]]:
         if not repo_names:
             return None
-        stmt = select(Repo.id).where(or_(*[Repo.name.ilike(n) for n in repo_names]))
+        stmt = select(Repo.id).where(
+            or_(*[Repo.name.ilike(n) for n in repo_names]))
         res = await self.db.execute(stmt)
         return [r[0] for r in res.all()]

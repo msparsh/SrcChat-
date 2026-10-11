@@ -1,78 +1,159 @@
-# SrcChat: Agentic Codebase Assistant for Public GitHub Repositories
+# SrcChat
 
-SrcChat is a production-grade web application where users index one or more **public** GitHub repositories as pure text, extracting AST structure and embeddings, and then query the codebases across files and repositories using an agentic assistant.
+A modern codebase assistant for exploring public GitHub repositories through semantic search, AST-aware indexing, and agent-driven analysis.
 
-```mermaid
-flowchart TD
-    User([User]) -->|Provide GitHub URL| API[FastAPI Ingestion]
-    API -->|Pre-check size & branch| GH[GitHub REST API]
-    API -->|Shallow clone sandbox| Clone[Temp Git Clone]
-    Clone -->|Filter & secret masking| Filter[Security Sanitizer]
-    Filter -->|Tree-sitter AST & Fallback| Parser[Symbol & Edge Extractor]
-    Parser -->|Chunk & Batch Embed| Chunks[Code Chunk Engine]
-    Chunks -->|Store Vectors & TSV| DB[(PostgreSQL + pgvector)]
-    
-    User -->|Ask Question / Action| Agent[Agent Loop]
-    Agent -->|Hybrid Search RRF| DB
-    Agent -->|Read Files & Trace AST| DB
-    Agent -->|Instrument Calls| Tracker[llmtrack Adapter]
-    Agent -->|Stream SSE + Cards| UI[React Tailwind UI]
-```
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white" />
+  <img alt="React" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" />
+  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white" />
+</p>
 
----
+SrcChat helps you add public repositories, index them safely, and ask questions about architecture, dependencies, flows, and change impact without executing the codebase itself.
 
-## Safety & Security Architecture
-- **Zero Code Execution**: Repositories are treated strictly as untrusted text datasets. No tests, builds, package managers, or scripts are ever run.
-- **SSRF Hardening**: Only URLs matching `https://github.com/<owner>/<repo>` are accepted. Hostnames and paths are strictly validated against strict regex patterns.
-- **Subprocess Safety**: All git operations are executed using argument lists (`subprocess.exec`), never shell interpolation (`shell=True`).
-- **Secret Redaction**: Credentials, tokens, private keys, and `.env*` files are masked or skipped before chunking and embedding.
-- **Prompt Injection Boundaries**: Untrusted code snippets are surrounded by explicit security boundary delimiters.
+## Highlights
 
----
+- Search and analyze multiple repositories in one workspace
+- Ask architecture, onboarding, flow, and impact questions
+- Combine static structure analysis with vector retrieval and agent reasoning
+- Keep repositories isolated as text-based, security-filtered data sources
+- Explore results in a polished web UI with repo scope controls and structured outputs
 
-## Enforced Limits
+## Screenshots
 
-| Metric | Enforced Limit | Behavior on Limit Exceeded |
-| :--- | :--- | :--- |
-| **Max Repo Size** | 100 MB | Rejected at API pre-check before cloning |
-| **Max Files per Repo** | 3,000 files | Ingestion aborted early with clear error |
-| **Max LOC per Repo** | 200,000 LOC | Ingestion aborted early |
-| **Per-File Size Cap** | 300 KB | Skipped and counted |
-| **Max Repos per Workspace** | 10 | Rejection on adding repo |
-| **Concurrent Ingestion Jobs** | 2 | Async semaphore queue |
+### Workspace
 
----
+![SrcChat workspace with repository scope, quick actions, and code explorer](docs/screenshots/workspace-overview.png)
 
-## Setup & Running
+### Repository explorer
 
-### Using Docker Compose
+![Browsing indexed repository files in SrcChat](docs/screenshots/code-explorer.png)
+
+### Add a repository
+
+![Add repository dialog with indexing limits](docs/screenshots/add-repository.png)
+
+## What it does
+
+SrcChat is designed for code understanding at scale. You can index a repository, scope the search to specific repos, and ask questions like:
+
+- Where does the request flow start and end?
+- What parts of the system are most coupled to this model?
+- Which files should a new engineer read first?
+- What would be affected by changing this API contract?
+
+The system reads repository content in a controlled way, extracts structural metadata, stores embeddings, and uses an agent to synthesize answers grounded in the indexed code.
+
+## Tech stack
+
+- Backend: Python, FastAPI, PostgreSQL + pgvector
+- Frontend: React, TypeScript, Vite, Tailwind CSS
+- Retrieval: semantic search, structured repo metadata, hybrid query flow
+- Infra: Docker and Docker Compose
+
+## Quick start
+
+### 1) Configure environment
+
 ```bash
 cp .env.example .env
+```
+
+Update the values as needed for your LLM and embedding provider. The default config is suitable for local smoke tests.
+
+### 2) Run the app
+
+```bash
 docker compose up --build
 ```
-- Frontend: `http://localhost:5173`
-- Backend API Docs: `http://localhost:8000/docs`
-- PostgreSQL pgvector: `localhost:5432`
 
-### Running Backend Locally
+Access the app here:
+
+- Frontend: http://localhost:5173
+- Backend docs: http://localhost:8000/docs
+- PostgreSQL: localhost:5432
+
+## Local development
+
+### Backend
+
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Running Frontend Locally
+### Frontend
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
----
+## Project structure
 
-## Regression & Unit Tests
-Run the test suite including the 25-query retrieval regression benchmark:
+```text
+.
+├── .env.example
+├── docker-compose.yml
+├── LICENSE
+├── README.md
+├── backend/
+│   ├── app/
+│   │   ├── agent/
+│   │   ├── api/
+│   │   ├── core/
+│   │   ├── db/
+│   │   ├── ingest/
+│   │   ├── llm/
+│   │   ├── models/
+│   │   ├── retrieval/
+│   │   └── schemas/
+│   ├── tests/
+│   └── requirements.txt
+├── docs/
+│   ├── DECISIONS.md
+│   └── screenshots/
+│       ├── add-repository.png
+│       ├── code-explorer.png
+│       └── workspace-overview.png
+├── frontend/
+│   ├── src/
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── ...
+└── .gitignore
+```
+
+## Safety model
+
+SrcChat treats repository contents as untrusted data and keeps execution isolated.
+
+- No live code execution or build/test runs against user repositories
+- Strict validation of GitHub repository URLs
+- Secret redaction before indexing and embedding
+- Repository size, file count, and file-size guardrails
+- Concurrency limits to avoid excessive ingestion spikes
+
+## Limits
+
+| Metric | Value |
+| :--- | :--- |
+| Max repo size | 100 MB |
+| Max files per repo | 3,000 |
+| Max LOC per repo | 200,000 |
+| Max file size | 300 KB |
+| Max repos per workspace | 10 |
+| Concurrent indexing jobs | 2 |
+
+## Testing
+
 ```bash
 cd backend
-pytest -v tests/
+pytest -q tests/
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE) for details.

@@ -10,10 +10,15 @@ def _get_db_url() -> str:
     # If explicitly set to sqlite or if postgres url uses localhost and we detect no pg
     if "sqlite" in url:
         return url
-    # Check for env override
-    dev_mode = os.environ.get("SRCCHAT_DEV_SQLITE", "").lower() in ("1", "true", "yes")
+    # Check for env override or local sqlite db
+    dev_mode = (
+        os.environ.get("SRCCHAT_DEV_SQLITE", "").lower() in ("1", "true", "yes")
+        or os.path.exists("srcchat_dev.db")
+        or os.path.exists("backend/srcchat_dev.db")
+    )
     if dev_mode:
-        return "sqlite+aiosqlite:///./srcchat_dev.db"
+        db_path = "./srcchat_dev.db" if os.path.exists("srcchat_dev.db") or not os.path.exists("backend/srcchat_dev.db") else "./backend/srcchat_dev.db"
+        return f"sqlite+aiosqlite:///{db_path}"
     return url
 
 _db_url = _get_db_url()

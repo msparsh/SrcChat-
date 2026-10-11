@@ -4,7 +4,7 @@ import json
 import math
 from dataclasses import dataclass
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, text
+from sqlalchemy import select, and_, or_, case
 
 from app.core.config import settings
 from app.llm.embedding_adapter import get_embedding_adapter
@@ -88,14 +88,19 @@ class HybridRetriever:
         query_vec = query_embeddings[0] if query_embeddings else None
 
         vector_results = []
-        if query_vec is not None:
+        has_real_embeddings = (
+            settings.EMBEDDING_PROVIDER == "openai"
+            and bool(settings.EMBEDDING_API_KEY)
+        )
+        if query_vec is not None and has_real_embeddings:
             vector_results = await self._vector_search(query_vec, repo_ids, language, path_prefix, chunk_type, limit=top_k * 2)
 
         # 2. Full-text / Keyword Search
         keyword_results = await self._keyword_search(query, repo_ids, language, path_prefix, chunk_type, limit=top_k * 2)
 
         # 3. Fuse via RRF
-        fused = compute_rrf([vector_results, keyword_results], k=settings.RRF_K)
+        fused = compute_rrf(
+            [vector_results, keyword_results], k=settings.RRF_K)
 
         final_results = []
         for item in fused[:top_k]:
@@ -137,7 +142,8 @@ class HybridRetriever:
                         Chunk.chunk_type,
                         Chunk.symbol,
                         Chunk.text,
-                        Chunk.embedding.cosine_distance(query_vec).label("distance")
+                        Chunk.embedding.cosine_distance(
+                            query_vec).label("distance")
                     )
                     .join(File, Chunk.file_id == File.id)
                     .join(Repo, Chunk.repo_id == Repo.id)
@@ -258,8 +264,9 @@ class HybridRetriever:
         limit: int = 30
     ) -> List[Dict[str, Any]]:
         # ILIKE / fulltext search
-        search_terms = [f"%{term.strip()}%" for term in query.split() if len(term.strip()) > 1][:4]
-        
+        search_terms = [f"%{term.strip()}%" for term in query.split()
+                        if len(term.strip()) > 1][:4]
+
         stmt = (
             select(
                 Chunk.id,
@@ -289,6 +296,12 @@ class HybridRetriever:
         if search_terms:
             text_conditions = [Chunk.text.ilike(t) for t in search_terms]
             conditions.append(or_(*text_conditions))
+            relevance = sum(
+                (case((condition, 1), else_=0)
+                 for condition in text_conditions),
+                start=0,
+            )
+            stmt = stmt.order_by(relevance.desc())
 
         if conditions:
             stmt = stmt.where(and_(*conditions))
