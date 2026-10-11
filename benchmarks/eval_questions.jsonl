@@ -1,0 +1,10 @@
+{"id": "q1", "type": "single-repo", "repos": ["fastapi"], "question": "Where is the FastAPI main application class defined?", "expected_files": ["fastapi/applications.py"]}
+{"id": "q2", "type": "single-repo", "repos": ["fastapi"], "question": "How are route dependencies injected and evaluated?", "expected_files": ["fastapi/dependencies/utils.py", "fastapi/routing.py"]}
+{"id": "q3", "type": "single-repo", "repos": ["requests"], "question": "Where is the HTTP adapter transport logic implemented?", "expected_files": ["src/requests/adapters.py"]}
+{"id": "q4", "type": "single-repo", "repos": ["requests"], "question": "How are session cookies managed and merged?", "expected_files": ["src/requests/cookies.py", "src/requests/sessions.py"]}
+{"id": "q5", "type": "single-repo", "repos": ["express"], "question": "How is router middleware dispatch handled?", "expected_files": ["lib/router/index.js", "lib/router/layer.py"]}
+{"id": "q6", "type": "single-repo", "repos": ["gin"], "question": "Where is the Gin Engine and RouterGroup context struct defined?", "expected_files": ["gin.go", "context.go"]}
+{"id": "q7", "type": "single-repo", "repos": ["srcchat"], "question": "Where is secret masking executed during ingestion?", "expected_files": ["backend/app/core/secret_masker.py", "backend/app/ingest/service.py"]}
+{"id": "q8", "type": "cross-repo", "repos": ["fastapi", "gin"], "question": "Compare routing and middleware handling between FastAPI and Gin", "expected_files": ["fastapi/routing.py", "gin.go", "routergroup.go"]}
+{"id": "q9", "type": "cross-repo", "repos": ["requests", "fastapi"], "question": "How do client session timeouts in requests compare to server async timeouts in fastapi?", "expected_files": ["src/requests/adapters.py", "fastapi/applications.py"]}
+{"id": "q10", "type": "cross-repo", "repos": ["express", "fastapi"], "question": "Compare middleware registration and request lifecycle between Express and FastAPI", "expected_files": ["lib/router/index.js", "fastapi/routing.py", "fastapi/middleware/asyncexitstack.py"]}

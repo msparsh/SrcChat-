@@ -7,12 +7,25 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship
 from app.core.config import settings
 
-_dev_sqlite = (
-    os.environ.get("SRCCHAT_DEV_SQLITE", "").lower() in ("1", "true", "yes")
-    or "sqlite" in settings.DATABASE_URL
-    or os.path.exists("srcchat_dev.db")
-    or os.path.exists("backend/srcchat_dev.db")
-)
+def _check_sqlite_mode() -> bool:
+    if os.environ.get("SRCCHAT_DEV_SQLITE", "").lower() in ("1", "true", "yes"):
+        return True
+    if "sqlite" in settings.DATABASE_URL:
+        return True
+    if os.path.exists("srcchat_dev.db") or os.path.exists("backend/srcchat_dev.db"):
+        return True
+    import socket
+    from urllib.parse import urlparse
+    try:
+        clean = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
+        p = urlparse(clean)
+        with socket.create_connection((p.hostname or "localhost", p.port or 5432), timeout=0.3):
+            return False
+    except OSError:
+        return True
+    return False
+
+_dev_sqlite = _check_sqlite_mode()
 
 if _dev_sqlite:
     # SQLite-compatible types

@@ -179,9 +179,9 @@ class AgentToolRegistry:
 
     async def get_repo_overview(self, repo: str) -> Dict[str, Any]:
         """Returns the stored repo summary and top-level statistics."""
-        stmt = select(Repo).where(Repo.name.ilike(repo))
+        stmt = select(Repo).where(Repo.name.ilike(repo)).order_by(Repo.created_at.desc())
         res = await self.db.execute(stmt)
-        repo_obj = res.scalar_one_or_none()
+        repo_obj = res.scalars().first()
         if not repo_obj:
             return {"error": f"Repository '{repo}' not found."}
 

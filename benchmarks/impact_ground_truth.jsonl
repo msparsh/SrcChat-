@@ -1,0 +1,4 @@
+{"symbol": "validate_and_normalize_github_url", "language": "python", "file": "backend/app/core/validator.py", "expected_callers": ["backend/app/api/endpoints.py", "backend/tests/test_core.py"]}
+{"symbol": "mask_secrets", "language": "python", "file": "backend/app/core/secret_masker.py", "expected_callers": ["backend/app/ingest/service.py", "backend/tests/test_core.py", "backend/tests/test_integration.py"]}
+{"symbol": "CodeChunker", "language": "python", "file": "backend/app/ingest/chunker.py", "expected_callers": ["backend/app/ingest/service.py", "backend/tests/test_core.py", "backend/tests/test_integration.py"]}
+{"symbol": "compute_rrf", "language": "python", "file": "backend/app/retrieval/retriever.py", "expected_callers": ["backend/app/retrieval/retriever.py", "backend/tests/test_core.py"]}

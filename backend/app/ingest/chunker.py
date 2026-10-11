@@ -42,6 +42,12 @@ class CodeChunker:
         if chunks:
             return chunks
 
+        # Attempt Python native AST chunking
+        if language == "python" or file_path.endswith(".py"):
+            py_chunks = self._chunk_with_python_ast(repo_name, file_path, content, lines)
+            if py_chunks:
+                return py_chunks
+
         # Fallback to sliding-window indentation-aware chunking
         return self._chunk_sliding_window(repo_name, file_path, language, lines)
 
@@ -83,6 +89,51 @@ class CodeChunker:
                 start_line=current_start,
                 end_line=len(lines),
                 text=header + text_body
+            ))
+        return chunks
+
+    def _chunk_with_python_ast(
+        self,
+        repo_name: str,
+        file_path: str,
+        content: str,
+        lines: List[str]
+    ) -> List[CodeChunk]:
+        import ast
+        try:
+            tree = ast.parse(content)
+        except Exception:
+            return []
+
+        chunks: List[CodeChunk] = []
+        top_defs = [n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))]
+        if not top_defs:
+            return []
+
+        first_start = top_defs[0].lineno
+        if first_start > 2:
+            preamble = "\n".join(lines[:first_start - 1])
+            hdr = self._format_chunk_header(repo_name, file_path, "python", "module_preamble")
+            chunks.append(CodeChunk(
+                chunk_type="summary",
+                symbol="module_preamble",
+                start_line=1,
+                end_line=first_start - 1,
+                text=hdr + preamble
+            ))
+
+        for node in top_defs:
+            s_line = node.lineno
+            e_line = getattr(node, "end_lineno", s_line)
+            slice_lines = lines[s_line - 1:e_line]
+            sym_name = node.name
+            hdr = self._format_chunk_header(repo_name, file_path, "python", sym_name)
+            chunks.append(CodeChunk(
+                chunk_type="code",
+                symbol=sym_name,
+                start_line=s_line,
+                end_line=e_line,
+                text=hdr + "\n".join(slice_lines)
             ))
         return chunks
 
