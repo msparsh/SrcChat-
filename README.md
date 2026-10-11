@@ -1,6 +1,6 @@
 # SrcChat
 
-A modern codebase assistant for exploring public GitHub repositories through semantic search, AST-aware indexing, and agent-driven analysis.
+A modern codebase assistant for understanding public GitHub repositories through semantic search, static structure analysis, and agentic reasoning.
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" />
@@ -9,47 +9,51 @@ A modern codebase assistant for exploring public GitHub repositories through sem
   <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white" />
 </p>
 
-SrcChat helps you add public repositories, index them safely, and ask questions about architecture, dependencies, flows, and change impact without executing the codebase itself.
+SrcChat helps you add public repositories, index them safely, and ask meaningful questions about architecture, dependencies, data flow, and change impact without running the codebase itself.
 
-## Highlights
+## Why teams use it
 
-- Search and analyze multiple repositories in one workspace
-- Ask architecture, onboarding, flow, and impact questions
-- Combine static structure analysis with vector retrieval and agent reasoning
-- Keep repositories isolated as text-based, security-filtered data sources
-- Explore results in a polished web UI with repo scope controls and structured outputs
+- Explore multiple repositories from a single workspace
+- Ask architecture and onboarding questions grounded in real code
+- Trace request flow and system boundaries across files and repos
+- Combine vector retrieval with AST-aware repository metadata
+- Keep sensitive content isolated in a safe, read-only indexing workflow
+
+## Features
+
+- Multi-repo workspace management with scope filtering
+- GitHub repository ingestion with validation and safety limits
+- Code understanding via semantic search, repo metadata, and symbol structure
+- Agent-driven answers for flow tracing, impact analysis, and architecture summaries
+- Web UI with quick actions, repo explorer, telemetry, and structured output cards
 
 ## Screenshots
 
-### Workspace
+### Workspace overview
 
-![SrcChat workspace with repository scope, quick actions, and code explorer](docs/screenshots/workspace-overview.png)
+![SrcChat workspace overview](docs/screenshots/workspace-overview.png)
 
-### Repository explorer
+### Add repository flow
 
-![Browsing indexed repository files in SrcChat](docs/screenshots/code-explorer.png)
+![Add repository dialog](docs/screenshots/add-repository.png)
 
-### Add a repository
+## What it solves
 
-![Add repository dialog with indexing limits](docs/screenshots/add-repository.png)
+SrcChat is built for code understanding at scale. You can index a repository, narrow the search to specific repos, and ask questions like:
 
-## What it does
+- Where does the request lifecycle begin and end?
+- Which modules are most tightly coupled to this change?
+- What should a new engineer read first?
+- What would be affected if this API contract changes?
 
-SrcChat is designed for code understanding at scale. You can index a repository, scope the search to specific repos, and ask questions like:
-
-- Where does the request flow start and end?
-- What parts of the system are most coupled to this model?
-- Which files should a new engineer read first?
-- What would be affected by changing this API contract?
-
-The system reads repository content in a controlled way, extracts structural metadata, stores embeddings, and uses an agent to synthesize answers grounded in the indexed code.
+The app reads repository content in a controlled way, extracts structure and metadata, stores embeddings, and uses an agent to synthesize answers grounded in the indexed code.
 
 ## Tech stack
 
-- Backend: Python, FastAPI, PostgreSQL + pgvector
+- Backend: Python, FastAPI, SQLAlchemy, PostgreSQL + pgvector
 - Frontend: React, TypeScript, Vite, Tailwind CSS
-- Retrieval: semantic search, structured repo metadata, hybrid query flow
-- Infra: Docker and Docker Compose
+- Retrieval: semantic search, static metadata, hybrid reasoning
+- Infrastructure: Docker and Docker Compose
 
 ## Quick start
 
@@ -59,18 +63,18 @@ The system reads repository content in a controlled way, extracts structural met
 cp .env.example .env
 ```
 
-Update the values as needed for your LLM and embedding provider. The default config is suitable for local smoke tests.
+Update the values for your selected LLM and embedding provider. The default configuration is suitable for local smoke testing.
 
-### 2) Run the app
+### 2) Run the stack
 
 ```bash
 docker compose up --build
 ```
 
-Access the app here:
+Then open:
 
 - Frontend: http://localhost:5173
-- Backend docs: http://localhost:8000/docs
+- API docs: http://localhost:8000/docs
 - PostgreSQL: localhost:5432
 
 ## Local development
@@ -128,13 +132,13 @@ npm run dev
 
 ## Safety model
 
-SrcChat treats repository contents as untrusted data and keeps execution isolated.
+SrcChat treats repository contents as untrusted input and keeps execution isolated.
 
 - No live code execution or build/test runs against user repositories
 - Strict validation of GitHub repository URLs
-- Secret redaction before indexing and embedding
-- Repository size, file count, and file-size guardrails
-- Concurrency limits to avoid excessive ingestion spikes
+- Secret masking before indexing and embedding
+- Guardrails for repo size, file count, and file size
+- Concurrency limits for ingestion jobs
 
 ## Limits
 
